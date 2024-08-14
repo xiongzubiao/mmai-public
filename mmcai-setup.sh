@@ -10,14 +10,6 @@ div
 log "Welcome to MMC.AI setup!"
 div
 
-## uninstall gpu-operator
-
-div
-log_good "Removing existing nvidia-gpu-operator..."
-div
-
-helm uninstall nvidia-gpu-operator -n gpu-operator --cascade "foreground"
-
 ## Create a secret for pulling MemVerge docker images
 
 div
@@ -85,5 +77,5 @@ log_good "Beginning installation..."
 div
 
 ## install mmc.ai system
-helm install -n $NAMESPACE mmcai-system charts/mmcai-system \
-    --set billing.database.nodeHostname=$mysql_node_hostname \
+helm install -n $NAMESPACE mmcai-system https://memverge.github.io/mmc.ai-setup/mmcai-system \
+    --set billing.database.nodeHostname=$mysql_node_hostname
