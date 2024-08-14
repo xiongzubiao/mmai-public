@@ -135,22 +135,13 @@ chmod 777 mysql-pre-setup.sh
 ```
 
 
-#### MMC.AI Cluster
+#### MMC.AI Cluster and Management Planes
 Download and run `mmcai-setup.sh` on the control plane node:
 
 ``` bash
 wget https://raw.githubusercontent.com/MemVerge/mmc.ai-setup/setup/mmcai-setup.sh
 chmod 777 mmcai-setup.sh
 ./mmcai-setup.sh
-```
-
-### Management Center
-
-The management center will allow users to view the MMC.AI dashboard.
-Install it with the following helm invocation:
-
-```bash
-helm install -n <MANAGER_RELEASE_NAMESPACE> <MANAGER_RELEASE_NAME> https://memverge.github.io/mmc.ai-setup/mmcai-manager
 ```
 
 Once deployed, the MMC.AI dashboard should be accessible at `http://<control-plane-ip>:32323`.
@@ -164,7 +155,7 @@ Once deployed, the MMC.AI dashboard should be accessible at `http://<control-pla
 
 On the control plane node:
 ```bash
-helm uninstall -n <MANAGER_RELEASE_NAMESPACE> <MANAGER_RELEASE_NAME>
+helm uninstall -n mmcai-system mmcai-manager
 ```
 
 ### Cluster
