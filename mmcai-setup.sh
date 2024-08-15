@@ -1,7 +1,5 @@
 #!/bin/bash
 
-## Following Scott's instructions here https://memverge.atlassian.net/wiki/x/B4Dkr
-
 source logging.sh
 
 ## welcome message
@@ -65,7 +63,7 @@ div
 helm repo add memverge https://memverge.github.io/mmc.ai-setup
 
 ## install mmc.ai system
-helm install -n $NAMESPACE mmcai-system memverge/mmcai-system \
+helm install -n $NAMESPACE mmcai-system memverge/mmcai-cluster \
     --set billing.database.nodeHostname=$mysql_node_hostname
 
 ## install mmc.ai management
