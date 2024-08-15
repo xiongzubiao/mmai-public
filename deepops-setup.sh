@@ -67,6 +67,24 @@ yq_set '.container_manager = "crio"' config/group_vars/k8s-cluster.yml
 
 yq_uninstall
 
+## Set up ansible logs
+
+rm -rf logs
+
+mkdir logs
+
+ANSIBLE_CFG=./ansible.cfg
+
+if [[ "$(grep log_path $ANSIBLE_CFG)" -ne 0 ]]; then
+  LOG_PATH=logs/k8s_deploy.log
+  log "No log_path found in deepops/ansible.cfg, will set path to ./$LOG_PATH"
+
+  # Create the logfile if it doesn't already exist
+  touch $LOG_PATH
+  echo "log_path = $(pwd)/$LOG_PATH" >> $ANSIBLE_CFG
+  echo "display_args_to_stdout = True" >> $ANSIBLE_CFG
+fi
+
 div
 log_good "Attempting Kubernetes setup..."
 div

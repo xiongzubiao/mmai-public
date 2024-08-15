@@ -71,6 +71,19 @@ for key in "${!sysctl_vars[@]}"; do
 done
 
 div
+log_good "Installing Kustomize..."
+div
+
+wget -O install_kustomize.sh "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"
+chmod +x install_kustomize.sh
+./install_kustomize.sh
+
+cp kustomize /usr/local/bin
+
+rm -rf kustomize
+rm -rf install_kustomize.sh
+
+div
 log_good "Installing Kubeflow..."
 div
 
