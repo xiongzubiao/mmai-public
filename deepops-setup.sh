@@ -42,6 +42,21 @@ if [ "$(basename "$PWD")" != "deepops" ]; then
   exit 1
 fi
 
+## add an unqualified registry
+
+cat << EOF > submodules/kubespray/roles/container-engine/cri-o/templates/unqualified.conf.j2
+{%- set _unqualified_registries = ['docker.io'] -%}
+{% for _registry in crio_registries if _registry.unqualified -%}
+{% if _registry.prefix is defined -%}
+{{ _unqualified_registries.append(_registry.prefix) }}
+{% else %}
+{{ _unqualified_registries.append(_registry.location) }}
+{%- endif %}
+{%- endfor %}
+
+unqualified-search-registries = {{ _unqualified_registries | string }}
+EOF
+
 ## modify relevant config values
 
 yq_install
