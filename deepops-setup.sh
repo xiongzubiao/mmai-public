@@ -93,6 +93,3 @@ ansible-playbook -l k8s-cluster playbooks/k8s-cluster.yml
 div
 log_good "Kubernetes setup was successful!"
 div
-log_good "Attempting NFS client provisioner setup..."
-div
-ansible-playbook playbooks/k8s-cluster/nfs-client-provisioner.yml
