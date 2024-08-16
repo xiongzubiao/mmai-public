@@ -8,14 +8,6 @@ div
 log "Welcome to MMC.AI setup!"
 div
 
-## uninstall gpu-operator
-
-div
-log_good "Removing existing nvidia-gpu-operator..."
-div
-
-helm uninstall nvidia-gpu-operator -n gpu-operator --cascade "foreground"
-
 NAMESPACE="mmcai-system"
 
 div
@@ -63,7 +55,7 @@ div
 helm repo add memverge https://memverge.github.io/mmc.ai-setup
 
 ## install mmc.ai system
-helm install -n $NAMESPACE mmcai-system memverge/mmcai-cluster \
+helm install -n $NAMESPACE mmcai-cluster memverge/mmcai-cluster \
     --set billing.database.nodeHostname=$mysql_node_hostname
 
 ## install mmc.ai management
