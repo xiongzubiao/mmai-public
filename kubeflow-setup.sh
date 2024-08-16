@@ -12,7 +12,7 @@ if [ -d ./kubeflow/ ]; then
 fi
 
 log "Cloning Kubeflow..."
-git clone git@github.com:kubeflow/manifests.git kubeflow --branch v1.8.1
+git clone https://github.com/kubeflow/manifests.git kubeflow --branch v1.8.1
 
 cd kubeflow
 
@@ -40,11 +40,11 @@ update_sysctl_conf() {
   local value="$2"
   local config="$3"
 
-  if grep -q "^${key}=" "$config"; then
+  if sudo grep -q "^${key}=" "$config"; then
     log "Warning: ${key} already exists. Updating value to ${value}."
-    sed -i "s|^${key}=.*|${key}=${value}|" "$config"
+    sudo sed -i "s|^${key}=.*|${key}=${value}|" "$config"
   else
-    log "${key}=${value}" >> "$config"
+    echo "${key}=${value}" | sudo tee -a "$config"
     log "Appended ${key}=${value} to ${config}."
   fi
 }
@@ -55,7 +55,7 @@ for key in "${!sysctl_vars[@]}"; {
 }
 
 # Apply the new settings
-sysctl --system
+sudo sysctl --system
 
 # Verify the new settings
 log "Verifying sysctl settings:"
@@ -78,7 +78,9 @@ wget -O install_kustomize.sh "https://raw.githubusercontent.com/kubernetes-sigs/
 chmod +x install_kustomize.sh
 ./install_kustomize.sh
 
-cp kustomize /usr/local/bin
+sudo chmod 777 kustomize
+
+sudo cp kustomize /usr/local/bin
 
 rm -rf kustomize
 rm -rf install_kustomize.sh
