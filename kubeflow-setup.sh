@@ -4,56 +4,57 @@ source logging.sh
 
 div
 log "Welcome to the MMC.AI Kubeflow installer!"
+log "First, setting sysctl variables across all hosts..."
 div
 
-# Variables to be added/updated
-declare -A sysctl_vars
-sysctl_vars=(
-  ["fs.inotify.max_queued_events"]="16384"
-  ["fs.inotify.max_user_instances"]="1024"
-  ["fs.inotify.max_user_watches"]="1004050"
-)
+cat > sysctl-playbook.yaml <<EOF
+---
+- name: Configure sysctl settings across all hosts
+  hosts: all
+  become: yes
+  tasks:
+    - name: Ensure sysctl configuration file exists
+      ansible.builtin.file:
+        path: /etc/sysctl.conf
+        state: touch
 
-SYSCTL="/etc/sysctl.conf"
+    - name: Set fs.inotify.max_queued_events
+      ansible.builtin.lineinfile:
+        path: /etc/sysctl.conf
+        regexp: '^fs.inotify.max_queued_events'
+        line: 'fs.inotify.max_queued_events = 16384'
+        create: yes
 
-# Function to update or append a sysctl variable
-update_sysctl_conf() {
-  local key="$1"
-  local value="$2"
-  local config="$3"
+    - name: Set fs.inotify.max_user_instances
+      ansible.builtin.lineinfile:
+        path: /etc/sysctl.conf
+        regexp: '^fs.inotify.max_user_instances'
+        line: 'fs.inotify.max_user_instances = 1024'
+        create: yes
 
-  if sudo grep -q "^${key}=" "$config"; then
-    log "Warning: ${key} already exists. Updating value to ${value}."
-    sudo sed -i "s|^${key}=.*|${key}=${value}|" "$config"
-  else
-    echo "${key}=${value}" | sudo tee -a "$config"
-    log "Appended ${key}=${value} to ${config}."
-  fi
-}
+    - name: Set fs.inotify.max_user_watches
+      ansible.builtin.lineinfile:
+        path: /etc/sysctl.conf
+        regexp: '^fs.inotify.max_user_watches'
+        line: 'fs.inotify.max_user_watches = 1004050'
+        create: yes
 
-# Iterate over the sysctl variables and update or append them
-for key in "${!sysctl_vars[@]}"; {
-  update_sysctl_conf "$key" "${sysctl_vars[$key]}" "$SYSCTL"
-}
+    - name: Apply sysctl changes
+      ansible.builtin.sysctl:
+        name: "{{ item.key }}"
+        value: "{{ item.value }}"
+        state: present
+        reload: yes
+      loop:
+        - { key: 'fs.inotify.max_queued_events', value: '16384' }
+        - { key: 'fs.inotify.max_user_instances', value: '1024' }
+        - { key: 'fs.inotify.max_user_watches', value: '1004050' }
+EOF
 
-# Apply the new settings
-sudo sysctl --system
-
-# Verify the new settings
-log "Verifying sysctl settings:"
-for key in "${!sysctl_vars[@]}"; do
-  current_value=$(sysctl -n "$key")
-  expected_value="${sysctl_vars[$key]}"
-
-  if [ "$current_value" == "$expected_value" ]; then
-    log "Success: ${key} is set to ${expected_value}."
-  else
-    log "Error: ${key} is set to ${current_value} but expected ${expected_value}."
-  fi
-done
+ansible-playbook sysctl-playbook.yaml
 
 div
-log "Installing kubeflow..."
+log "Second, installing kubeflow..."
 div
 
 ## Use newer kubeflow

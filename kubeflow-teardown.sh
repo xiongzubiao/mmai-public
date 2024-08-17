@@ -27,8 +27,9 @@ log "Will attempt to delete all kubeflow resources $attempts times."
 div
 
 while [ $attempts -gt 0 ]; do
-    # Print the number of retries left
-    log_good "Deleting all kubeflow resources. Attempts left: $((attempts))"
+    div
+    log "Deleting all kubeflow resources. Attempts left: $((attempts))"
+    div
     kustomize build example | kubectl delete -f -
     sleep 15
     # Decrease the counter
@@ -37,5 +38,5 @@ done
 
 div
 log "Check if there are any remaining kubeflow pods or namespaces."
-log "If not, remove this directory via `cd ..; rm -rf manifests`"
+log "If not, remove this directory via 'cd ..; rm -rf manifests'"
 div
