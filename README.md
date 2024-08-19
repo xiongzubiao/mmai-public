@@ -1,1 +1,3 @@
-mmc.ai setup charts and scripts.
+# MMC.AI Setup Guide
+
+See README.md in the `gh-pages` branch.
