@@ -22,21 +22,28 @@ cat > sysctl-playbook.yaml <<EOF
       ansible.builtin.lineinfile:
         path: /etc/sysctl.conf
         regexp: '^fs.inotify.max_queued_events'
-        line: 'fs.inotify.max_queued_events = 16384'
+        line: 'fs.inotify.max_queued_events = 32384'
         create: yes
 
     - name: Set fs.inotify.max_user_instances
       ansible.builtin.lineinfile:
         path: /etc/sysctl.conf
         regexp: '^fs.inotify.max_user_instances'
-        line: 'fs.inotify.max_user_instances = 1024'
+        line: 'fs.inotify.max_user_instances = 4096'
         create: yes
 
     - name: Set fs.inotify.max_user_watches
       ansible.builtin.lineinfile:
         path: /etc/sysctl.conf
         regexp: '^fs.inotify.max_user_watches'
-        line: 'fs.inotify.max_user_watches = 1004050'
+        line: 'fs.inotify.max_user_watches = 2008100'
+        create: yes
+
+    - name: Set net.core.somaxconn
+      ansible.builtin.lineinfile:
+        path: /etc/sysctl.conf
+        regexp: '^net.core.somaxconn'
+        line: 'net.core.somaxconn = 8192'
         create: yes
 
     - name: Apply sysctl changes
@@ -46,9 +53,10 @@ cat > sysctl-playbook.yaml <<EOF
         state: present
         reload: yes
       loop:
-        - { key: 'fs.inotify.max_queued_events', value: '16384' }
-        - { key: 'fs.inotify.max_user_instances', value: '1024' }
-        - { key: 'fs.inotify.max_user_watches', value: '1004050' }
+        - { key: 'fs.inotify.max_queued_events', value: '32384' }
+        - { key: 'fs.inotify.max_user_instances', value: '4096' }
+        - { key: 'fs.inotify.max_user_watches', value: '2008100' }
+        - { key: 'net.core.somaxconn', value: '8192' }
 EOF
 
 ansible-playbook sysctl-playbook.yaml
