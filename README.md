@@ -1,3 +1,3 @@
 # MMC.AI Setup Guide
 
-See memverge.github.io/mmc.ai-setup/.
+See [http://memverge.github.io/mmc.ai-setup/](http://memverge.github.io/mmc.ai-setup/).
