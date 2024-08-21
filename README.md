@@ -1,3 +1,3 @@
 # MMC.AI Setup Guide
 
-See README.md in the `gh-pages` branch.
+See memverge.github.io/mmc.ai-setup/.
