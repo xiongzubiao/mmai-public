@@ -50,13 +50,9 @@ div
 log_good "Beginning installation..."
 div
 
-## Add repository
-
-helm repo add memverge https://memverge.github.io/mmc.ai-setup
-
 ## install mmc.ai system
-helm install -n $NAMESPACE mmcai-cluster memverge/mmcai-cluster \
+helm install -n $NAMESPACE mmcai-cluster oci://ghcr.io/memverge/charts/mmcai-cluster \
     --set billing.database.nodeHostname=$mysql_node_hostname
 
 ## install mmc.ai management
-helm install -n $NAMESPACE mmcai-manager memverge/mmcai-manager
+helm install -n $NAMESPACE mmcai-manager oci://ghcr.io/memverge/charts/mmcai-manager
