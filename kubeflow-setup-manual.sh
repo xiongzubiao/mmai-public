@@ -78,7 +78,7 @@ wget -O install_kustomize.sh "https://raw.githubusercontent.com/kubernetes-sigs/
 chmod +x install_kustomize.sh
 ./install_kustomize.sh
 
-sudo chmod 777 kustomize
+sudo chmod 755 kustomize
 
 sudo cp kustomize /usr/local/bin
 
