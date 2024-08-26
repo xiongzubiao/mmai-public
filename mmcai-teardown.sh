@@ -142,6 +142,7 @@ fi
 if $remove_mmcai_cluster; then
     div
     log_good "Removing MMC.AI Cluster..."
+    echo "If you selected to remove cluster resources, disregard below messages that resources are kept due to the resource policy:"
     helm uninstall -n $RELEASE_NAMESPACE mmcai-cluster
 fi
 
