@@ -2,11 +2,8 @@
 
 source logging.sh
 
-mmcai_manager_detected=false
-mmcai_cluster_detected=false
-
-remove_mmcai_manager=false
 remove_mmcai_cluster=false
+remove_mmcai_manager=false
 remove_cluster_resources=false
 remove_billing_database=false
 remove_memverge_secrets=false
@@ -15,46 +12,47 @@ remove_prometheus_crds_namespace=false
 remove_nvidia_gpu_operator=false
 remove_kubeflow=false
 
-no_mmcai_manager=false
-no_mmcai_cluster=false
-
 force_if_remove_cluster_resources=false
 
 confirm_selection=false
 
 RELEASE_NAMESPACE=mmcai-system
 
-div
+
+# Sanity check.
+log "Getting version to check connectivity."
+if ! kubectl version; then
+    log_bad "Cannot proceed with teardown."
+    exit 1
+else
+    log_good "Proceeding with teardown."
+fi
+
+
+# Determine if mmcai-cluster and mmcai-manager are installed.
+if helm list -n mmcai-system -a -q | grep mmcai-cluster; then
+    mmcai_cluster_detected=true
+else
+    mmcai_cluster_detected=false
+    log "MMC.AI Cluster not detected."
+fi
+
 if helm list -n mmcai-system -a -q | grep mmcai-manager; then
     mmcai_manager_detected=true
-    read -p "Remove MMC.AI Manager [y/N]:" remove_mmcai_manager
-    case $remove_mmcai_manager in
-        [Yy]* ) remove_mmcai_manager=true;;
-        * ) remove_mmcai_manager=false;;
-    esac
 else
     mmcai_manager_detected=false
     log "MMC.AI Manager not detected."
 fi
 
-if $remove_mmcai_manager || ! $mmcai_manager_detected; then
-    no_mmcai_manager=true
-else
-    no_mmcai_manager=false
-fi
 
-
-div
-if helm list -n mmcai-system -a -q | grep mmcai-cluster; then
-    mmcai_cluster_detected=true
+# Remove mmcai-cluster?
+if $mmcai_cluster_detected; then
+    div
     read -p "Remove MMC.AI Cluster [y/N]:" remove_mmcai_cluster
     case $remove_mmcai_cluster in
         [Yy]* ) remove_mmcai_cluster=true;;
         * ) remove_mmcai_cluster=false;;
     esac
-else
-    mmcai_cluster_detected=false
-    log "MMC.AI Cluster not detected."
 fi
 
 if $remove_mmcai_cluster || ! $mmcai_cluster_detected; then
@@ -64,28 +62,54 @@ else
 fi
 
 
-div
-echo_red "Caution: This will cause data loss!"
-if ! $mmcai_cluster_detected; then
-    echo_red "MMC.AI Cluster not detected. Removing cluster resources will require force. This may result in an unclean state."
-    force_if_remove_cluster_resources=true
+# Remove mmcai-manager?
+if $mmcai_manager_detected; then
+    if $no_mmcai_cluster; then
+        # mmcai-manager does not work without mmcai-cluster.
+        echo "MMC.AI Manager does not work without MMC.AI Cluster. MMC.AI Manager will be removed."
+        remove_mmcai_manager=true
+    else
+        div
+        read -p "Remove MMC.AI Manager [y/N]:" remove_mmcai_manager
+        case $remove_mmcai_manager in
+            [Yy]* ) remove_mmcai_manager=true;;
+            * ) remove_mmcai_manager=false;;
+        esac
+    fi
 fi
-read -p "Remove cluster resources (e.g. node groups, departments, projects, workloads) [y/N]:" remove_cluster_resources
-case $remove_cluster_resources in
-    [Yy]* ) remove_cluster_resources=true;;
-    * ) remove_cluster_resources=false;;
-esac
 
-if $remove_cluster_resources && $mmcai_cluster_detected; then
-    read -p "Force? This may result in an unclean state [y/N]:" force_if_remove_cluster_resources
-    case $force_if_remove_cluster_resources in
-        [Yy]* ) force_if_remove_cluster_resources=true;;
-        * ) force_if_remove_cluster_resources=false;;
-    esac
+if $remove_mmcai_manager || ! $mmcai_manager_detected; then
+    no_mmcai_manager=true
+else
+    no_mmcai_manager=false
 fi
 
 
 if $no_mmcai_cluster; then
+    # Remove cluster resources?
+    div
+    if ! $mmcai_cluster_detected; then
+        echo_red "MMC.AI Cluster not detected. Removing cluster resources will require force. This may result in an unclean state."
+        force_if_remove_cluster_resources=true
+    fi
+
+    echo_red "Caution: This will cause data loss!"
+    read -p "Remove cluster resources (e.g. node groups, departments, projects, workloads) [y/N]:" remove_cluster_resources
+    case $remove_cluster_resources in
+        [Yy]* ) remove_cluster_resources=true;;
+        * ) remove_cluster_resources=false;;
+    esac
+
+    if $remove_cluster_resources && $mmcai_cluster_detected; then
+        read -p "Force? This may result in an unclean state [y/N]:" force_if_remove_cluster_resources
+        case $force_if_remove_cluster_resources in
+            [Yy]* ) force_if_remove_cluster_resources=true;;
+            * ) force_if_remove_cluster_resources=false;;
+        esac
+    fi
+
+
+    # Remove billing database?
     div
     echo_red "Caution: This will cause data loss!"
     read -p "Remove billing database [y/N]:" remove_billing_database
@@ -93,59 +117,56 @@ if $no_mmcai_cluster; then
         [Yy]* ) remove_billing_database=true;;
         * ) remove_billing_database=false;;
     esac
-fi
 
 
-if $no_mmcai_manager \
-&& $no_mmcai_cluster
-then
+    # Remove MemVerge image pull secrets?
     div
     read -p "Remove MemVerge image pull secrets [y/N]:" remove_memverge_secrets
     case $remove_memverge_secrets in
         [Yy]* ) remove_memverge_secrets=true;;
         * ) remove_memverge_secrets=false;;
     esac
-fi
 
 
-if $no_mmcai_manager \
-&& $no_mmcai_cluster \
-&& $remove_cluster_resources \
-&& $remove_billing_database \
-&& $remove_memverge_secrets
-then
+    # Remove namespaces?
+    if $remove_cluster_resources \
+    && $remove_billing_database \
+    && $remove_memverge_secrets
+    then
+        div
+        echo_red "Caution: This is dangerous!"
+        read -p "Remove MMC.AI namespaces [y/N]:" remove_namespaces
+        case $remove_namespaces in
+            [Yy]* ) remove_namespaces=true;;
+            * ) remove_namespaces=false;;
+        esac
+    fi
+
+
+    # Remove Prometheus CRDs and namespace?
     div
     echo_red "Caution: This is dangerous!"
-    read -p "Remove MMC.AI namespaces [y/N]:" remove_namespaces
-    case $remove_namespaces in
-        [Yy]* ) remove_namespaces=true;;
-        * ) remove_namespaces=false;;
-    esac
-fi
-
-
-if $no_mmcai_manager \
-&& $no_mmcai_cluster
-then
-    div
-    echo_red "Caution: This is dangerous!"
-    read -p "Remove Prometheus CRDs and namespace [y/N]:" remove_prometheus_crds_namespace
+    read -p "Remove Prometheus CRDs and namespace (MMC.AI included dependency) [y/N]:" remove_prometheus_crds_namespace
     case $remove_prometheus_crds_namespace in
         [Yy]* ) remove_prometheus_crds_namespace=true;;
         * ) remove_prometheus_crds_namespace=false;;
     esac
 
+
+    # Remove NVIDIA GPU Operator?
     div
     echo_red "Caution: This is dangerous!"
-    read -p "Remove NVIDIA GPU Operator [y/N]:" remove_nvidia_gpu_operator
+    read -p "Remove NVIDIA GPU Operator (MMC.AI standalone dependency) [y/N]:" remove_nvidia_gpu_operator
     case $remove_nvidia_gpu_operator in
         [Yy]* ) remove_nvidia_gpu_operator=true;;
         * ) remove_nvidia_gpu_operator=false;;
     esac
 
+
+    # Remove Kubeflow?
     div
     echo_red "Caution: This is dangerous!"
-    read -p "Remove Kubeflow [y/N]:" remove_kubeflow
+    read -p "Remove Kubeflow (MMC.AI standalone dependency) [y/N]:" remove_kubeflow
     case $remove_kubeflow in
         [Yy]* ) remove_kubeflow=true;;
         * ) remove_kubeflow=false;;
@@ -161,7 +182,7 @@ echo "MMC.AI Cluster:" $remove_mmcai_cluster
 echo "Cluster resources:" $remove_cluster_resources
 echo "Billing database:" $remove_billing_database
 echo "MemVerge image pull secrets:" $remove_memverge_secrets
-echo "Namespaces:" $remove_namespaces
+echo "MMC.AI namespaces:" $remove_namespaces
 echo "Prometheus CRDs and namespace:" $remove_prometheus_crds_namespace
 echo "NVIDIA GPU Operator:" $remove_nvidia_gpu_operator
 echo "Kubeflow:" $remove_kubeflow
