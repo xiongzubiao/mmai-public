@@ -30,7 +30,7 @@ while [ $attempts -gt 0 ]; do
     div
     log "Deleting all kubeflow resources. Attempts left: $((attempts))"
     div
-    kustomize build example | kubectl delete -f -
+    kustomize build example | kubectl delete --ignore-not-found -f -
     sleep 15
     # Decrease the counter
     attempts=$((attempts - 1))
