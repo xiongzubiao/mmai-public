@@ -227,6 +227,7 @@ if $remove_cluster_resources; then
         resourceflavors.kueue.x-k8s.io
         workloadpriorityclasses.kueue.x-k8s.io
         workloads.kueue.x-k8s.io
+        departments.mmc.ai
     '
 
     kubectl delete crd $cluster_resource_crds --ignore-not-found &
