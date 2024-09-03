@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -euo pipefail
+
 source logging.sh
 
 remove_mmcai_cluster=false
