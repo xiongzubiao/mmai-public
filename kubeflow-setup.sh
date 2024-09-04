@@ -66,7 +66,7 @@ log "Second, installing kubeflow..."
 div
 
 ## Use newer kubeflow
-sed -i 's/v1.7.0/v1.9.0/g' ./scripts/k8s/deploy_kubeflow.sh
+sed -i 's/v1.7.0/v1.8.0/g' ./scripts/k8s/deploy_kubeflow.sh
 
 ## Set istio gateway to newer version
 sed -i 's:istio-1-16:istio-1-17:g' ./scripts/k8s/deploy_kubeflow.sh
