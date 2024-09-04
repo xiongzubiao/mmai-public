@@ -181,7 +181,12 @@ div
 echo "COMPONENT: REMOVE"
 echo "MMC.AI Manager:" $remove_mmcai_manager
 echo "MMC.AI Cluster:" $remove_mmcai_cluster
-echo "Cluster resources:" $remove_cluster_resources
+if $remove_cluster_resources && $force_if_remove_cluster_resources; then
+    force_indication='(force)'
+else
+    force_indication=''
+fi
+echo "Cluster resources:" $remove_cluster_resources $force_indication
 echo "Billing database:" $remove_billing_database
 echo "MemVerge image pull secrets:" $remove_memverge_secrets
 echo "MMC.AI namespaces:" $remove_namespaces
@@ -251,6 +256,12 @@ if $remove_cluster_resources; then
     fi
 
     wait $cluster_resource_crds_removed
+
+    for cluster_resource_crd in $cluster_resource_crds; do
+        if ! [ -z "$(kubectl get crd $cluster_resource_crd --ignore-not-found)" ]; then
+            log_bad "CRD $cluster_resource_crd was not removed successfully."
+        fi
+    done
 fi
 
 if $remove_mmcai_cluster; then
