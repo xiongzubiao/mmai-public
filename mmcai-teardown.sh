@@ -255,6 +255,15 @@ if $remove_cluster_resources; then
         done
     fi
 
+    mmcai_labels='
+        mmc.ai/department
+        mmc.ai/nodegroup
+    '
+
+    for label in $mmcai_labels; do
+        kubectl label nodes --all ${label}-
+    done
+
     wait $cluster_resource_crds_removed
 
     for cluster_resource_crd in $cluster_resource_crds; do
