@@ -298,10 +298,21 @@ fi
 if $remove_nvidia_gpu_operator; then
     div
     log_good "Removing NVIDIA GPU Operator..."
+
+    # The order is important here.
+    # NVIDIA GPU Operator Helm chart does not create an instance of this CRD so the CRD can be deleted first.
     kubectl delete crd nvidiadrivers.nvidia.com --ignore-not-found
-    kubectl delete crd clusterpolicies.nvidia.com --ignore-not-found
+
+    cluster_policies=$(kubectl get clusterpolicies -o custom-columns=:.metadata.name)
+    if ! [ -z "$cluster_policies" ]; then
+        kubectl delete clusterpolicies $cluster_policies --ignore-not-found
+    fi
+
     helm uninstall -n gpu-operator nvidia-gpu-operator --ignore-not-found
     kubectl delete namespace gpu-operator --ignore-not-found
+
+    # NVIDIA GPU Operator Helm chart creates an instance of this CRD so the CRD must be deleted after.
+    kubectl delete crd clusterpolicies.nvidia.com --ignore-not-found
 
     # NFD
     kubectl delete crd nodefeatures.nfd.k8s-sigs.io --ignore-not-found
