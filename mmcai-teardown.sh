@@ -256,9 +256,9 @@ if $remove_cluster_resources; then
     fi
 
     # Get all mmc.ai labels attached to nodes
-    mmcai_labels=$(kubectl get nodes -A -o json | jq -r '.items[].metadata.labels' | sed 's/\("\|,\)//g' | awk -F':' '{print $1}' | grep mmc.ai)
+    mmcai_labels=$(kubectl describe nodes -A | sed 's/=/ /g' | awk '{print $1}' | grep mmc.ai)
 
-    for label in $mmcai_labels; do
+    for label in ${mmcai_labels[@]}; do
         kubectl label nodes --all ${label}-
     done
 
