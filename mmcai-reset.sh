@@ -108,7 +108,8 @@ read -sp "MySQL root password: " MYSQL_ROOT_PASSWORD
 echo ""
 
 # MMCAI_GHCR_SECRET should have created the mmcai-system and mmcloud-operator-system namespaces
-kubectl get namespace monitoring &>/dev/null || kubectl create namespace monitoring
+# Therefore create monitoring by hand.
+kubectl create namespace monitoring
 
 kubectl -n $NAMESPACE create secret generic mmai-mysql-secret \
     --from-literal=mysql-root-password=$MYSQL_ROOT_PASSWORD \
