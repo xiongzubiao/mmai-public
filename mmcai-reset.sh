@@ -78,6 +78,13 @@ function uninstall_mmai_ns () {
     kubectl delete ns $NAMESPACE mmcloud-operator-system --ignore-not-found
 }
 
+function uninstall_mmai_departments() {
+    # Remove department CRDs
+    div
+    log "Removing MMC.AI departments..."
+    kubectl delete crd departments.mmc.ai --ignore-not-found
+}
+
 function uninstall_dependency_charts () {
     # Remove the gpu-operator.
     # Uninstalling the helm chart may fail -- just keep chugging
@@ -92,12 +99,20 @@ function uninstall_dependency_charts () {
     kubectl delete crd nodefeaturerules.nfd.k8s-sigs.io --ignore-not-found
 }
 
-
 function uninstall_dependency_ns () {
     # Remove the gpu-operator and monitoring namespaces
     div
     log "Removing dependency namespaces..."
     kubectl delete ns monitoring gpu-operator
+}
+
+function uninstall_mysql () {
+    div
+    log_good "Removing billing database..."
+    wget -O mysql-teardown.sh https://raw.githubusercontent.com/MemVerge/mmc.ai-setup/main/mysql-teardown.sh
+    chmod +x mysql-teardown.sh
+    ./mysql-teardown.sh
+    rm mysql-teardown.sh
 }
 
 function reinstall_mmai_secret() {
@@ -151,7 +166,10 @@ function reinstall_mmai_charts () {
 function mmcai_reset() {
     uninstall_mmai_charts
     uninstall_mmai_ns
+    uninstall_mmai_departments
     uninstall_dependency_charts
+    uninstall_dependency_ns
+    uninstall_mysql
 
     div
     log_good "Removed all MMC.AI installation components. Reinstalling stack..."
@@ -170,8 +188,8 @@ function verify_installation () {
         mmcai-cluster/crds/
         mmcai-cluster/charts/kueue/templates/crd/
         '
-
     CRDS=$(kubectl get crds | tail -n +2 | awk '{print $1}')
+    CRDS_MISSING=false
 
     helm pull oci://ghcr.io/memverge/charts/mmcai-cluster --version 0.1.0 --untar
 
@@ -195,16 +213,20 @@ function verify_installation () {
             kubectl get crd $crd
             if [ $? -ne 0 ]; then
                 log_bad "Error: CRD $crd is missing"
+                CRDS_MISSING=true
             else
                 log_good "OK: CRD $crd is present"
             fi
 
-            # If a CRD is missing, then reset.
-            # TODO
+            if [ "$CRDS_MISSING" == "true" ]; then
+                log_bad "At least one CRD was missing. Consider re-running this script."
+                exit 1
+            fi
         done
     done
+
+    log_good "All CRDs have installed."
 }
 
 mmcai_reset
-
 verify_installation
