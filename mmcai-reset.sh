@@ -71,17 +71,16 @@ function uninstall_mmai_charts () {
     fi
 }
 
-# Then, remove namespaces
 function uninstall_mmai_ns () {
+    # Then, remove namespaces
     div
     log "Removing MMC.AI namespaces..."
     kubectl delete ns $NAMESPACE mmcloud-operator-system --ignore-not-found
 }
 
-# Remove the gpu-operator.
-# Uninstalling the helm chart may fail -- just keep chugging
-
 function uninstall_dependency_charts () {
+    # Remove the gpu-operator.
+    # Uninstalling the helm chart may fail -- just keep chugging
     div
     log "Removing NVIDIA GPU Operator..."
     kubectl delete crd nvidiadrivers.nvidia.com --ignore-not-found
@@ -93,16 +92,13 @@ function uninstall_dependency_charts () {
     kubectl delete crd nodefeaturerules.nfd.k8s-sigs.io --ignore-not-found
 }
 
-# Remove the gpu-operator and monitoring namespaces
 
 function uninstall_dependency_ns () {
+    # Remove the gpu-operator and monitoring namespaces
     div
     log "Removing dependency namespaces..."
     kubectl delete ns monitoring gpu-operator
 }
-
-# div
-# log_good "Removed all MMC.AI installation components. Reinstalling stack..."
 
 function reinstall_mmai_secret() {
     div
@@ -124,26 +120,26 @@ function reinstall_mysql_secret() {
         --from-literal=mysql-replication-password=$MYSQL_ROOT_PASSWORD
 }
 
-## Reinstall the GPU operator
 
 function reinstall_nvidia_operator () {
+    ## Reinstall the GPU operator
     wget -O gpu-operator-values.yaml https://raw.githubusercontent.com/MemVerge/mmc.ai-setup/main/gpu-operator-values.yaml
     wget -O nvidia-gpu-operator-setup.sh https://raw.githubusercontent.com/MemVerge/mmc.ai-setup/main/nvidia-gpu-operator-setup.sh
     chmod +x nvidia-gpu-operator-setup.sh
     ./nvidia-gpu-operator-setup.sh
 }
 
-## Reinstall the mysql directory
 
 function reinstall_mysql () {
+    ## Reinstall the mysql directory
     wget -O mysql-pre-setup.sh https://raw.githubusercontent.com/MemVerge/mmc.ai-setup/main/mysql-pre-setup.sh
     chmod +x mysql-pre-setup.sh
     ./mysql-pre-setup.sh
 }
 
-## Reinstall the charts
 
 function reinstall_mmai_charts () {
+    ## Reinstall the charts
     helm install -n $NAMESPACE mmcai-cluster oci://ghcr.io/memverge/charts/mmcai-cluster \
         --set billing.database.nodeHostname=$mysql_node_hostname \
         --debug 2> mmcai-cluster-debug.log
@@ -152,9 +148,24 @@ function reinstall_mmai_charts () {
         --debug 2> mmcai-manager-debug.log
 }
 
-## Check for our departments and kueue's CRDs
+function mmcai_reset() {
+    uninstall_mmai_charts
+    uninstall_mmai_ns
+    uninstall_dependency_charts
+
+    div
+    log_good "Removed all MMC.AI installation components. Reinstalling stack..."
+
+    reinstall_mmai_secret
+    reinstall_mysql_secret
+    reinstall_nvidia_operator
+    reinstall_mysql
+    reinstall_mmai_charts
+}
 
 function verify_installation () {
+    ## Check for our + kueue's CRDs
+
     CRDS_PATH='
         mmcai-cluster/crds/
         mmcai-cluster/charts/kueue/templates/crd/
@@ -193,3 +204,7 @@ function verify_installation () {
         done
     done
 }
+
+mmcai_reset
+
+verify_installation
