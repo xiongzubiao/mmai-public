@@ -120,6 +120,7 @@ function reinstall_mmai_secret() {
     log "Applying $MMCAI_GHCR_SECRET..."
     kubectl apply -f $MMCAI_GHCR_SECRET
     # MMCAI_GHCR_SECRET should have created the mmcai-system and mmcloud-operator-system namespaces
+    # Therefore create monitoring by hand.
     kubectl create namespace monitoring
 }
 
