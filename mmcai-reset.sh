@@ -131,6 +131,48 @@ chmod +x mysql-pre-setup.sh
 ## Reinstall the charts
 
 helm install -n $NAMESPACE mmcai-cluster oci://ghcr.io/memverge/charts/mmcai-cluster \
-    --set billing.database.nodeHostname=$mysql_node_hostname
+    --set billing.database.nodeHostname=$mysql_node_hostname \
+    --debug 2> mmcai-cluster-debug.log
 
-helm install -n $NAMESPACE mmcai-manager oci://ghcr.io/memverge/charts/mmcai-manager
+helm install -n $NAMESPACE mmcai-manager oci://ghcr.io/memverge/charts/mmcai-manager \
+    --debug 2> mmcai-manager-debug.log
+
+## Check for our departments and kueue's CRDs
+
+CRDS_PATH='
+    mmcai-cluster/crds/
+    mmcai-cluster/charts/kueue/templates/crd/
+    '
+
+CRDS=$(kubectl get crds | tail -n +2 | awk '{print $1}')
+
+helm pull oci://ghcr.io/memverge/charts/mmcai-cluster --version 0.1.0 --untar
+
+div
+log "Checking if CRDs have been installed..."
+
+## Get the CRDs from those directories -> check if they appear in the CRD list.
+
+for path in $CRDS_PATH; do
+    crd_regex='name: \([a-z]\|-\|[0-9]\)\+\.\(\([a-z]\|-\|[0-9]\)\+\.\?\)\+'
+               # "name:" denotes the start of CRD name
+               # ignore the \, they're escape characters.
+               # this boils down to:
+               #    ([a-z] | - | [0-9])+ . ([a-z] | - | [0-9])+ .?
+               #    alphanum or dash, followed by period, followed by alphanum, last period optional
+    crd_list=$(grep "$crd_regex" "$path" | awk '{print $3}')
+    for crd in $crd_list; do
+        div
+        log "Check CRD $crd:"
+
+        kubectl get crd $crd
+        if [ $? -ne 0 ]; then
+            log_bad "Error: CRD $crd is missing"
+        else
+            log_good "OK: CRD $crd is present"
+        fi
+
+        # If a CRD is missing, then reset.
+        # TODO
+    done
+done
