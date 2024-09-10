@@ -65,16 +65,30 @@ div
 log "Second, installing kubeflow..."
 div
 
-## Use newer kubeflow
-sed -i 's/v1.7.0/v1.8.0/g' ./scripts/k8s/deploy_kubeflow.sh
+KUBEFLOW_VERSION='v1.9.0'
+KUBEFLOW_ISTIO_VERSION='1.22'
+KUBEFLOW_MANIFEST='kubeflow-manifest.yaml'
 
-## Set istio gateway to newer version
-sed -i 's:istio-1-16:istio-1-17:g' ./scripts/k8s/deploy_kubeflow.sh
+log "Cloning Kubeflow manifests..."
+git clone https://github.com/kubeflow/manifests.git kubeflow --branch $KUBEFLOW_VERSION
 
-## Patch deploy_kubeflow with a git clone that checks for success
-# cp ./git-clone.sh ./scripts/k8s/git-clone.sh
-# cp ./logging.sh ./scripts/k8s/logging.sh
-# sed -i '/^source /i\source git-clone.sh' ./scripts/k8s/deploy_kubeflow.sh
-# sed -i 's:git clone:git_clone:g' ./scripts/k8s/deploy_kubeflow.sh
+# From DeepOps: Change the default Istio Ingress Gateway configuration to support NodePort for ease-of-use in on-prem
+path_istio_version=${KUBEFLOW_ISTIO_VERSION#v}
+path_istio_version=${path_istio_version//./-}
+sed -i 's:ClusterIP:NodePort:g' "kubeflow/common/istio-$path_istio_version/istio-install/base/patches/service.yaml"
 
-./scripts/k8s/deploy_kubeflow.sh
+# From DeepOps: Make the Kubeflow cluster allow insecure http instead of https
+# https://github.com/kubeflow/manifests#connect-to-your-kubeflow-cluster
+sed -i 's:JWA_APP_SECURE_COOKIES=true:JWA_APP_SECURE_COOKIES=false:' "kubeflow/apps/jupyter/jupyter-web-app/upstream/base/params.env"
+sed -i 's:VWA_APP_SECURE_COOKIES=true:VWA_APP_SECURE_COOKIES=false:' "kubeflow/apps/volumes-web-app/upstream/base/params.env"
+sed -i 's:TWA_APP_SECURE_COOKIES=true:TWA_APP_SECURE_COOKIES=false:' "kubeflow/apps/tensorboard/tensorboards-web-app/upstream/base/params.env"
+
+kustomize build kubeflow/example > $KUBEFLOW_MANIFEST
+
+log "Applying all Kubeflow resources..."
+while ! kubectl apply -f $KUBEFLOW_MANIFEST; do
+    log "Kubeflow installation incomplete."
+    log "Waiting 15 seconds before attempt..."
+    sleep 15
+done
+log "Kubeflow installed."
