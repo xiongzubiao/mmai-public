@@ -2,6 +2,15 @@
 
 source logging.sh
 
+TEMP_DIR=$(mktemp -d)
+
+cleanup() {
+    rm -rf $TEMP_DIR
+    exit
+}
+
+trap cleanup EXIT
+
 div
 log "Performing kubeflow teardown."
 log "First, installing kustomize..."
@@ -23,25 +32,25 @@ KUBEFLOW_ISTIO_VERSION='1.22'
 KUBEFLOW_MANIFEST='kubeflow-manifest.yaml'
 
 log "Cloning Kubeflow manifests..."
-git clone https://github.com/kubeflow/manifests.git kubeflow --branch $KUBEFLOW_VERSION
+git clone https://github.com/kubeflow/manifests.git $TEMP_DIR/kubeflow --branch $KUBEFLOW_VERSION
 
 # From DeepOps: Change the default Istio Ingress Gateway configuration to support NodePort for ease-of-use in on-prem
 path_istio_version=${KUBEFLOW_ISTIO_VERSION#v}
 path_istio_version=${path_istio_version//./-}
-sed -i 's:ClusterIP:NodePort:g' "kubeflow/common/istio-$path_istio_version/istio-install/base/patches/service.yaml"
+sed -i 's:ClusterIP:NodePort:g' "$TEMP_DIR/kubeflow/common/istio-$path_istio_version/istio-install/base/patches/service.yaml"
 
 # From DeepOps: Make the Kubeflow cluster allow insecure http instead of https
 # https://github.com/kubeflow/manifests#connect-to-your-kubeflow-cluster
-sed -i 's:JWA_APP_SECURE_COOKIES=true:JWA_APP_SECURE_COOKIES=false:' "kubeflow/apps/jupyter/jupyter-web-app/upstream/base/params.env"
-sed -i 's:VWA_APP_SECURE_COOKIES=true:VWA_APP_SECURE_COOKIES=false:' "kubeflow/apps/volumes-web-app/upstream/base/params.env"
-sed -i 's:TWA_APP_SECURE_COOKIES=true:TWA_APP_SECURE_COOKIES=false:' "kubeflow/apps/tensorboard/tensorboards-web-app/upstream/base/params.env"
+sed -i 's:JWA_APP_SECURE_COOKIES=true:JWA_APP_SECURE_COOKIES=false:' "$TEMP_DIR/kubeflow/apps/jupyter/jupyter-web-app/upstream/base/params.env"
+sed -i 's:VWA_APP_SECURE_COOKIES=true:VWA_APP_SECURE_COOKIES=false:' "$TEMP_DIR/kubeflow/apps/volumes-web-app/upstream/base/params.env"
+sed -i 's:TWA_APP_SECURE_COOKIES=true:TWA_APP_SECURE_COOKIES=false:' "$TEMP_DIR/kubeflow/apps/tensorboard/tensorboards-web-app/upstream/base/params.env"
 
-kustomize build kubeflow/example > $KUBEFLOW_MANIFEST
+kustomize build $TEMP_DIR/kubeflow/example > $TEMP_DIR/$KUBEFLOW_MANIFEST
 
 attempts=5
 log "Deleting all Kubeflow resources..."
 log "Attempts remaining: $((attempts))"
-while [ $attempts -gt 0 ] && ! kubectl delete --ignore-not-found -f $KUBEFLOW_MANIFEST; do
+while [ $attempts -gt 0 ] && ! kubectl delete --ignore-not-found -f $TEMP_DIR/$KUBEFLOW_MANIFEST; do
     attempts=$((attempts - 1))
     log "Kubeflow removal incomplete."
     log "Attempts remaining: $((attempts))"
