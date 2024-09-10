@@ -1,6 +1,7 @@
 from kubernetes import client, config
 from kubernetes.client.rest import ApiException
 import sys
+import datetime
 
 # Load the kubeconfig
 config.load_kube_config()
@@ -17,21 +18,33 @@ def get_pods_with_high_cpu_requests(threshold=0.1):
     # Filter pods with CPU requests higher than the threshold
     for pod in all_pods.items:
         for container in pod.spec.containers:
+            # If limits are present, use them as a baseline;
+            # otherwise fall back to requests
+            limits = container.resources.limits
             requests = container.resources.requests
-            if requests and 'cpu' in requests:
-                cpu_request = requests['cpu']
-                # Convert the CPU request into millicores for comparison
-                cpu_request_m = convert_cpu_to_millicores(cpu_request)
-                if cpu_request_m >= threshold * 1000:  # Example: threshold = 100m
-                    pod_list.append({
-                        'namespace': pod.metadata.namespace,
-                        'name': pod.metadata.name,
-                        'cpu_request': cpu_request_m,
-                        'container': container.name
-                    })
+            if limits and 'cpu' in limits:
+                # Don't use requests if the limits have 'cpu'
+                requests = limits
+            if requests is None or 'cpu' not in requests:
+                # Skip this container if no 'cpu' in requests
+                continue
+            # Else, modify the requests, either by reducing
+            # w.r.t. the limit or w.r.t. the old request value
+            cpu_request = requests['cpu']
+            # Convert the CPU request into millicores for comparison
+            cpu_request_m = convert_cpu_to_millicores(cpu_request)
+            if cpu_request_m >= 100:  # Example: threshold = 100m
+                pod_list.append({
+                    'namespace': pod.metadata.namespace,
+                    'name': pod.metadata.name,
+                    'labels': pod.metadata.labels,
+                    'cpu_request': cpu_request_m,
+                    'container': container.name
+                    'owner': pod.metadata.owner_references[0]
+                })
 
     # Sort pods by CPU requests, highest first
-    pod_list.sort(key=lambda x: x['cpu_request'], reverse=True)
+    pod_list.sort(key=lambda x: x['cpu_limiot], reverse=True)
     return pod_list
 
 def convert_cpu_to_millicores(cpu):
@@ -43,7 +56,7 @@ def convert_cpu_to_millicores(cpu):
 
 def suggest_cpu_request_reduction(pod):
     """ Suggest halving the CPU request for the pod """
-    new_cpu_millicores = max(pod['cpu_request'] // 10, 20)  # Do not reduce below 20m
+    new_cpu_millicores = 50 # max(pod['cpu_request'] // 10, 20) # Do not reduce below 20m
     return new_cpu_millicores
 
 def make_cpu_requests(deployment, namespace, container_name, new_cpu_request):
@@ -72,6 +85,33 @@ def restart_pod(pod_name, namespace):
     except ApiException as e:
         print(f"Exception when restarting pod: {e}", file=sys.stderr)
 
+def restart_replicaset(set_name, namespace):
+    """ Restart a replicaset by deleting it and letting Kubernetes recreate it """
+    try:
+        print(f"Restarting ReplicaSet {set_name} in namespace {namespace}...")
+        v1.delete_namespaced_pod(name=set_name, namespace=namespace)
+    except ApiException as e:
+        print(f"Exception when restarting pod: {e}", file=sys.stderr)
+
+def restart_deployment(v1_apps, deployment, namespace):
+    now = datetime.datetime.utcnow()
+    now = str(now.isoformat("T") + "Z")
+    body = {
+        'spec': {
+            'template':{
+                'metadata': {
+                    'annotations': {
+                        'kubectl.kubernetes.io/restartedAt': now
+                    }
+                }
+            }
+        }
+    }
+    try:
+        v1_apps.patch_namespaced_deployment(deployment, namespace, body, pretty='true')
+    except ApiException as e:
+        print("Exception when calling AppsV1Api->read_namespaced_deployment_status: %s\n" % e)
+
 def main():
     # Get pods with the highest CPU requests (now with a lower threshold)
     high_cpu_pods = get_pods_with_high_cpu_requests()
@@ -81,6 +121,13 @@ def main():
     print("The following pods have high CPU requests and need changes:")
     for pod in high_cpu_pods:
         suggested_cpu_request = suggest_cpu_request_reduction(pod)
+
+        # Ignore pods with labels that we care about
+        if 'mmc.ai/project' in pod['labels']:
+            print(f"Pod: {pod['name']} (Namespace: {pod['namespace']}, Container: {pod['container']})")
+            print(f"Is managed by MMC.AI. Will not adjust CPU Request.")
+            print("-" * 40)
+            continue
 
         # Only list pods where the suggested CPU request is different from the current CPU request
         if pod['cpu_request'] != suggested_cpu_request:
@@ -102,7 +149,7 @@ def main():
         print("No changes were made. Exiting.")
         sys.exit(0)
 
-    # For each pod with high CPU request, find its deployment and halve the CPU request
+    # For each pod with high CPU request, find its deployment and apply the modified CPU request
     for pod in modified_pods:
         print(f"Processing pod {pod['name']} in namespace {pod['namespace']}")
 
@@ -117,13 +164,18 @@ def main():
                 deployment_owner = replica_set.metadata.owner_references[0]
 
                 if deployment_owner.kind == "Deployment":
+                    # Save the deployment owner name for a later rollout
+                    pod['deployment'] = deployment_owner.name
                     # Halve the CPU request in the container for the controlling deployment
                     new_cpu_request = f"{suggest_cpu_request_reduction(pod)}m"
                     make_cpu_requests(deployment_owner.name, pod['namespace'], pod['container'], new_cpu_request)
 
     # Restart the modified pods to apply the changes
     for pod in modified_pods:
-        restart_pod(pod['name'], pod['namespace'])
+        if 'deployment' in pod:
+            restart_deployment(pod['deployment'])
+        else:
+            restart_pod(pod['name'], pod['namespace'])
 
     # Wait a few seconds for the pods to restart
     import time
