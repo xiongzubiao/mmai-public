@@ -18,25 +18,38 @@ sudo cp kustomize /usr/local/bin
 rm -rf kustomize
 rm -rf install_kustomize.sh
 
-cd config/kubeflow-install/manifests
+KUBEFLOW_VERSION='v1.9.0'
+KUBEFLOW_ISTIO_VERSION='1.22'
+KUBEFLOW_MANIFEST='kubeflow-manifest.yaml'
 
-attempts=4
+log "Cloning Kubeflow manifests..."
+git clone https://github.com/kubeflow/manifests.git kubeflow --branch $KUBEFLOW_VERSION
 
-div
-log "Will attempt to delete all kubeflow resources $attempts times."
-div
+# From DeepOps: Change the default Istio Ingress Gateway configuration to support NodePort for ease-of-use in on-prem
+path_istio_version=${KUBEFLOW_ISTIO_VERSION#v}
+path_istio_version=${path_istio_version//./-}
+sed -i 's:ClusterIP:NodePort:g' "kubeflow/common/istio-$path_istio_version/istio-install/base/patches/service.yaml"
 
-while [ $attempts -gt 0 ]; do
-    div
-    log "Deleting all kubeflow resources. Attempts left: $((attempts))"
-    div
-    kustomize build example | kubectl delete --ignore-not-found -f -
-    sleep 15
-    # Decrease the counter
+# From DeepOps: Make the Kubeflow cluster allow insecure http instead of https
+# https://github.com/kubeflow/manifests#connect-to-your-kubeflow-cluster
+sed -i 's:JWA_APP_SECURE_COOKIES=true:JWA_APP_SECURE_COOKIES=false:' "kubeflow/apps/jupyter/jupyter-web-app/upstream/base/params.env"
+sed -i 's:VWA_APP_SECURE_COOKIES=true:VWA_APP_SECURE_COOKIES=false:' "kubeflow/apps/volumes-web-app/upstream/base/params.env"
+sed -i 's:TWA_APP_SECURE_COOKIES=true:TWA_APP_SECURE_COOKIES=false:' "kubeflow/apps/tensorboard/tensorboards-web-app/upstream/base/params.env"
+
+kustomize build kubeflow/example > $KUBEFLOW_MANIFEST
+
+attempts=5
+log "Deleting all Kubeflow resources..."
+log "Attempts remaining: $((attempts))"
+while [ $attempts -gt 0 ] && ! kubectl delete --ignore-not-found -f $KUBEFLOW_MANIFEST; do
     attempts=$((attempts - 1))
+    log "Kubeflow removal incomplete."
+    log "Attempts remaining: $((attempts))"
+    log "Waiting 15 seconds before attempt..."
+    sleep 15
 done
+log "Kubeflow should be removed."
 
 div
 log "Check if there are any remaining kubeflow pods or namespaces."
-log "If not, remove this directory via 'cd ..; rm -rf manifests'"
 div
