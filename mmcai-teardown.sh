@@ -275,7 +275,12 @@ if $remove_mmcai_cluster; then
     div
     log_good "Removing MMC.AI Cluster..."
     echo "If you selected to remove cluster resources, disregard below messages that resources are kept due to the resource policy:"
-    helm uninstall --debug -n $RELEASE_NAMESPACE mmcai-cluster --ignore-not-found
+    ## If no service account, run helm uninstall without the engine cleanup hook.
+    if kubectl get serviceaccount mmcloud-operator-controller-manager -n mmcloud-operator-system &> /dev/null; then
+        helm uninstall --debug --no-hooks -n $RELEASE_NAMESPACE mmcai-cluster --ignore-not-found
+    else
+        helm uninstall --debug -n $RELEASE_NAMESPACE mmcai-cluster --ignore-not-found
+    fi
 fi
 
 if $remove_billing_database; then
