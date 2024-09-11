@@ -215,7 +215,7 @@ log_good "Beginning teardown..."
 if $remove_mmcai_manager; then
     div
     log_good "Removing MMC.AI Manager..."
-    helm uninstall -n $RELEASE_NAMESPACE mmcai-manager --ignore-not-found
+    helm uninstall --debug -n $RELEASE_NAMESPACE mmcai-manager --ignore-not-found
 fi
 
 if $remove_cluster_resources; then
@@ -275,7 +275,7 @@ if $remove_mmcai_cluster; then
     div
     log_good "Removing MMC.AI Cluster..."
     echo "If you selected to remove cluster resources, disregard below messages that resources are kept due to the resource policy:"
-    helm uninstall -n $RELEASE_NAMESPACE mmcai-cluster --ignore-not-found
+    helm uninstall --debug -n $RELEASE_NAMESPACE mmcai-cluster --ignore-not-found
 fi
 
 if $remove_billing_database; then
@@ -317,7 +317,7 @@ if $remove_nvidia_gpu_operator; then
         kubectl delete clusterpolicies $cluster_policies --ignore-not-found
     fi
 
-    helm uninstall -n gpu-operator nvidia-gpu-operator --ignore-not-found
+    helm uninstall --debug -n gpu-operator nvidia-gpu-operator --ignore-not-found
     kubectl delete namespace gpu-operator --ignore-not-found
 
     # NVIDIA GPU Operator Helm chart creates an instance of this CRD so the CRD must be deleted after.
