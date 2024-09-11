@@ -1,6 +1,6 @@
 #!/bin/bash
 
-curl -LfsSo logging.sh https://raw.githubusercontent.com/MemVerge/mmc.ai-setup/main/util/logging.sh
+curl -LfsSo logging.sh https://raw.githubusercontent.com/MemVerge/mmc.ai-setup/main/logging.sh
 
 source logging.sh
 

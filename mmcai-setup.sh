@@ -10,6 +10,32 @@ div
 
 NAMESPACE="mmcai-system"
 
+while getopts "f:" opt; do
+  case $opt in
+    f)
+        MMCAI_GHCR_SECRET="$OPTARG"
+        ;;
+    \?)
+        div
+        log_bad "Invalid option: -$OPTARG" >&2
+        usage
+        exit 1
+        ;;
+    :)
+        div
+        log_bad "Option -$OPTARG requires an argument." >&2
+        usage
+        exit 1
+        ;;
+  esac
+done
+
+if [ -z "$MMCAI_GHCR_SECRET" ]; then
+    log_bad "Please provide a path to mmcai-ghcr-secret.yaml."
+    usage
+    exit 1
+fi
+
 div
 log_good "Please provide information for billing database:"
 div
@@ -18,15 +44,27 @@ read -p "MySQL database node hostname: " mysql_node_hostname
 read -sp "MySQL root password: " MYSQL_ROOT_PASSWORD
 echo ""
 
+div
+log_good "Creating directories for billing database:"
+div
+
+wget -O mysql-pre-setup.sh https://raw.githubusercontent.com/MemVerge/mmc.ai-setup/main/mysql-pre-setup.sh
+chmod +x mysql-pre-setup.sh
+./mysql-pre-setup.sh
 
 div
 log_good "Creating namespaces if needed..."
 div
 
-## Create namespaces
+if [[ -f "mmcai-ghcr-secret.yaml" ]]; then
+    kubectl apply -f mmcai-ghcr-secret.yaml
+else
+    kubectl create ns $NAMESPACE
+    kubectl create ns mmcloud-operator-system
+fi
 
-kubectl get namespace $NAMESPACE &>/dev/null || kubectl create namespace $NAMESPACE
-kubectl get namespace mmcloud-operator-system &>/dev/null || kubectl create namespace mmcloud-operator-system
+## Create monitoring namespace
+
 kubectl get namespace monitoring &>/dev/null || kubectl create namespace monitoring
 
 div
@@ -42,21 +80,13 @@ kubectl -n $NAMESPACE create secret generic mmai-mysql-secret \
     --from-literal=mysql-password=$MYSQL_ROOT_PASSWORD \
     --from-literal=mysql-replication-password=$MYSQL_ROOT_PASSWORD
 
-## Create image pull secrets
-
-kubectl -n $NAMESPACE get secret memverge-dockerconfig &>/dev/null || \
-kubectl -n $NAMESPACE create secret generic memverge-dockerconfig --from-file=.dockerconfigjson=$DOCKER_CONFIG --type=kubernetes.io/dockerconfigjson
-
-kubectl -n mmcloud-operator-system get secret memverge-dockerconfig &>/dev/null || \
-kubectl -n mmcloud-operator-system create secret generic memverge-dockerconfig --from-file=.dockerconfigjson=$DOCKER_CONFIG --type=kubernetes.io/dockerconfigjson
-
 div
 log_good "Beginning installation..."
 div
 
 ## install mmc.ai system
-helm install -n $NAMESPACE mmcai-cluster oci://ghcr.io/memverge/charts/mmcai-cluster \
+helm install --debug -n $NAMESPACE mmcai-cluster oci://ghcr.io/memverge/charts/mmcai-cluster \
     --set billing.database.nodeHostname=$mysql_node_hostname
 
 ## install mmc.ai management
-helm install -n $NAMESPACE mmcai-manager oci://ghcr.io/memverge/charts/mmcai-manager
+helm install --debug -n $NAMESPACE mmcai-manager oci://ghcr.io/memverge/charts/mmcai-manager
