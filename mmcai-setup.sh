@@ -10,32 +10,6 @@ div
 
 NAMESPACE="mmcai-system"
 
-while getopts "f:" opt; do
-  case $opt in
-    f)
-        MMCAI_GHCR_SECRET="$OPTARG"
-        ;;
-    \?)
-        div
-        log_bad "Invalid option: -$OPTARG" >&2
-        usage
-        exit 1
-        ;;
-    :)
-        div
-        log_bad "Option -$OPTARG requires an argument." >&2
-        usage
-        exit 1
-        ;;
-  esac
-done
-
-if [ -z "$MMCAI_GHCR_SECRET" ]; then
-    log_bad "Please provide a path to mmcai-ghcr-secret.yaml."
-    usage
-    exit 1
-fi
-
 div
 log_good "Please provide information for billing database:"
 div
