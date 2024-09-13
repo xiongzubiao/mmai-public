@@ -59,8 +59,8 @@ log_good "Beginning installation..."
 div
 
 ## install mmc.ai system
-helm install --debug -n $NAMESPACE mmcai-cluster oci://ghcr.io/memverge/charts/mmcai-cluster \
+helm install --debug -n $NAMESPACE mmcai-cluster oci://ghcr.io/memverge/charts/mmcai-cluster:0.2.0-rc \
     --set billing.database.nodeHostname=$mysql_node_hostname
 
 ## install mmc.ai management
-helm install --debug -n $NAMESPACE mmcai-manager oci://ghcr.io/memverge/charts/mmcai-manager
+helm install --debug -n $NAMESPACE mmcai-manager oci://ghcr.io/memverge/charts/mmcai-manager:0.2.0-rc
