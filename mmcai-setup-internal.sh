@@ -45,10 +45,11 @@ function helm_login() {
         log_good "Helm login was successful."
     else
         div
-        log_bad "Helm login was unsuccessful. Please provide an ${SECRET_YAML} that allows helm login."
+        log_bad "Helm login was unsuccessful."
+        log_bad "Please provide an mmcai-ghcr-secret-internal.yaml that allows helm login."
         div
         log "Report:"
-        cat ${SECRET_YAML}
+        cat mmcai-ghcr-secret-internal.yaml
         div
         exit 1
     fi
@@ -90,7 +91,7 @@ function helm_poke() {
     attempts=1
     limit=5
 
-    log "Will attempt to pull $1 $attempt times..."
+    log "Will attempt to pull $1 $limit times..."
     until helm pull --devel $1 2>&1 > /dev/null; do
         log "Attempt $attempts failed."
     
