@@ -30,8 +30,35 @@ div
 log_good "Creating namespaces if needed..."
 div
 
+function helm_login() {
+    # Extract creds
+    secret_json=$(
+        kubectl get secret memverge-dockerconfig -n mmcai-system --output="jsonpath={.data.\.dockerconfigjson}" |
+        base64 --decode
+    )
+    secret_user=$(echo ${secret_json} | jq -r '.auths."ghcr.io/memverge".username')
+    secret_token=$(echo ${secret_json} | jq -r '.auths."ghcr.io/memverge".password')
+
+    # Attempt login
+    if echo $secret_token | helm registry login ghcr.io/memverge -u $secret_user --password-stdin; then
+        div
+        log_good "Helm login was successful."
+    else
+        div
+        log_bad "Helm login was unsuccessful."
+        log_bad "Please provide an mmcai-ghcr-secret.yaml that allows helm login."
+        div
+        log "Report:"
+        cat mmcai-ghcr-secret.yaml
+        div
+        exit 1
+    fi
+}
+
 if [[ -f "mmcai-ghcr-secret.yaml" ]]; then
     kubectl apply -f mmcai-ghcr-secret.yaml
+    helm registry logout ghcr.io/memverge
+    helm_login
 else
     kubectl create ns $NAMESPACE
     kubectl create ns mmcloud-operator-system
@@ -59,8 +86,10 @@ log_good "Beginning installation..."
 div
 
 ## install mmc.ai system
-helm install --debug -n $NAMESPACE mmcai-cluster oci://ghcr.io/memverge/charts/mmcai-cluster:0.2.0-rc \
+helm install --debug -n $NAMESPACE mmcai-cluster oci://ghcr.io/memverge/charts/mmcai-cluster \
+    --version 0.2.0-rc \
     --set billing.database.nodeHostname=$mysql_node_hostname
 
 ## install mmc.ai management
-helm install --debug -n $NAMESPACE mmcai-manager oci://ghcr.io/memverge/charts/mmcai-manager:0.2.0-rc
+helm install --debug -n $NAMESPACE mmcai-manager oci://ghcr.io/memverge/charts/mmcai-manager \
+    --version 0.2.0-rc
