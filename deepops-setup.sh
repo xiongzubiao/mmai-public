@@ -7,6 +7,12 @@ source logging.sh
 YQ_BIN=yq_linux_amd64
 DOCKER_HUB_AUTH=""
 
+function jq_install() {
+  wget -O jq https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-amd64
+  chmod +x jq
+  sudo cp jq /usr/local/bin/
+}
+
 function yq_install() {
   local yq_version=v4.44.1
   wget https://github.com/mikefarah/yq/releases/download/${yq_version}/${YQ_BIN}.tar.gz -O - | tar xz
@@ -149,6 +155,10 @@ function get_docker_hub_stats() {
 div
 
 log "Welcome to the MMC.AI Kubernetes setup helper!"
+
+div
+
+jq_install
 
 div
 
