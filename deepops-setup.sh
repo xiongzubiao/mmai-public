@@ -107,32 +107,14 @@ EOF
 EOF
 }
 
-# See this StackOverflow response: https://stackoverflow.com/a/23243843
-# Used under CC BY-SA 3.0: https://creativecommons.org/licenses/by-sa/3.0/
-# Changes were made to the original response.
-function get_token() {
-  output=""
-  token=""
-  while IFS= read -p "$output" -r -s -n 1 c
-  do
-    if [[ $c == $'\0' ]]; then
-      break
-    fi
-
-    output="*"
-    token+="$c"
-  done
-  echo ""
-}
-
 function get_docker_hub_credentials() {
   log_good "Log into https://hub.docker.com/ and generate a \"Public Repo Read-Only\" token under Account Settings > Personal Access Token."
   log_good "Once generated, please copy it into the terminal. Press Enter to confirm your input:"
-  get_token
+  read -r -s docker_token
   log_good "Please also provide the Docker Hub username associated with this token:"
   read docker_username
   div
-  DOCKER_HUB_AUTH=$(echo -n '$docker_username:$token' | base64)
+  DOCKER_HUB_AUTH=$(echo -n '$docker_username:$docker_token' | base64)
 }
 
 function prompt_docker_hub_credentials() {
