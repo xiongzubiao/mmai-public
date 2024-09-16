@@ -8,17 +8,18 @@ YQ_BIN=yq_linux_amd64
 DOCKER_HUB_AUTH=""
 
 function jq_install() {
-  wget -O jq https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-amd64
+  log "Installing jq..."
+  wget -q -O jq https://github.com/jqlang/jq/releases/download/jq-1.7.1/jq-linux-amd64
   chmod +x jq
   sudo cp jq /usr/local/bin/
 }
 
 function yq_install() {
   local yq_version=v4.44.1
-  wget https://github.com/mikefarah/yq/releases/download/${yq_version}/${YQ_BIN}.tar.gz -O - | tar xz
+  wget -q https://github.com/mikefarah/yq/releases/download/${yq_version}/${YQ_BIN}.tar.gz -O - | tar xz
 
   # Test installation
-  log "yq version:"
+  log "If yq installation worked, the following line should contain the version info:"
   ./${YQ_BIN} --version
 }
 
@@ -43,8 +44,10 @@ if [ "$(basename "$PWD")" != "deepops" ]; then
   exit 1
 fi
 
-function add_unqualified_registry() {
-  cat << EOF > submodules/kubespray/roles/container-engine/cri-o/templates/unqualified.conf.j2
+function cat_unqualified_registry() {
+  filename="submodules/kubespray/roles/container-engine/cri-o/templates/unqualified.conf.j2"
+  log "Adding unqualified registry to $filename..."
+  cat << EOF > $filename
 {%- set _unqualified_registries = ['docker.io'] -%}
 {% for _registry in crio_registries if _registry.unqualified -%}
 {% if _registry.prefix is defined -%}
@@ -104,15 +107,29 @@ EOF
 EOF
 }
 
+function get_token() {
+  output=""
+  token=""
+  while IFS= read -p "$output" -r -s -n 1 c
+  do
+    if [[ $c == $'\0' ]]; then
+      break
+    fi
+
+    output="*"
+    token+="$c"
+  done
+  echo ""
+}
+
 function get_docker_hub_credentials() {
   log_good "Log into https://hub.docker.com/ and generate a \"Public Repo Read-Only\" token under Account Settings > Personal Access Token."
-  div
-  log_good "Please provide a Docker Hub username:"
+  log_good "Once generated, please copy it into the terminal. Press Enter to confirm your input:"
+  get_token
+  log_good "Please also provide the Docker Hub username associated with this token:"
   read docker_username
-  log_good "Please provide a Docker Hub Personal Access Token:"
-  read -s docker_token
-
-  DOCKER_HUB_AUTH=$(echo -n '$docker_username:$docker_token' | base64)
+  div
+  DOCKER_HUB_AUTH=$(echo -n '$docker_username:$token' | base64)
 }
 
 function prompt_docker_hub_credentials() {
@@ -122,16 +139,18 @@ function prompt_docker_hub_credentials() {
     return 1
   fi
 
+  log_bad "Input needed!"
+
   if [ $PULLS_REMAINING -lt "100" ]; then
-    log_bad "You have $PULLS_REMAINING Docker Hub container image pulls remaining."
-    log_bad "This is less than the default limit of 100 pulls for anonymous users."
+    log_bad "You have $PULLS_REMAINING anonymous Docker Hub container image pulls remaining."
+    log_bad "This is less than the default limit of 100 anonymous pulls."
   else
-    log "You have at least 100 Docker Hub container image pulls remaining."
-    log "This meets the default limit for anonymous users."
+    log_bad "You have at least 100 Docker Hub container image pulls remaining."
+    log_bad "This meets the default limit for anonymous users."
   fi
 
-  log "Kubernetes setup may fail partway if there are not sufficient image pull requests available."
-  log "Do you want to provide Docker Hub login credentials, so that you can increase your image pull limit to 200 or more? [y/N]"
+  log_bad "Kubernetes setup may fail partway if there are not sufficient image pull requests available."
+  log_bad "Do you want to provide Docker Hub login credentials, so that you can increase your image pull limit to 200 or more? [y/N]"
   read -p "" docker_response
 
   case $docker_response in
@@ -141,7 +160,7 @@ function prompt_docker_hub_credentials() {
       return 0
       ;;
     * )
-      log "Continuing without Docker Hub credentials..."
+      log_good "Continuing without Docker Hub credentials..."
       return 0
       ;;
   esac
@@ -154,7 +173,9 @@ function get_docker_hub_stats() {
 
 div
 
-log "Welcome to the MMC.AI Kubernetes setup helper!"
+log_good "Welcome to the MMC.AI Kubernetes setup helper!"
+
+sleep 1
 
 div
 
