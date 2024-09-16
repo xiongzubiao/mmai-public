@@ -107,6 +107,9 @@ EOF
 EOF
 }
 
+# See this StackOverflow response: https://stackoverflow.com/a/23243843
+# Used under CC BY-SA 3.0: https://creativecommons.org/licenses/by-sa/3.0/
+# Changes were made to the original response.
 function get_token() {
   output=""
   token=""
