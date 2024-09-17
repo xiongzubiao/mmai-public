@@ -114,7 +114,7 @@ function get_docker_hub_credentials() {
   log_good "Please also provide the Docker Hub username associated with this token:"
   read docker_username
   div
-  DOCKER_HUB_AUTH=$(echo -n '$docker_username:$docker_token' | base64)
+  DOCKER_HUB_AUTH=$(echo -n "$docker_username:$docker_token" | base64)
 }
 
 function prompt_docker_hub_credentials() {
