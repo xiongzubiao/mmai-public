@@ -87,9 +87,9 @@ div
 
 ## install mmc.ai system
 helm install --debug -n $NAMESPACE mmcai-cluster oci://ghcr.io/memverge/charts/mmcai-cluster \
-    --version 0.2.0-rc2 \
+    --version 0.2.0 \
     --set billing.database.nodeHostname=$mysql_node_hostname
 
 ## install mmc.ai management
 helm install --debug -n $NAMESPACE mmcai-manager oci://ghcr.io/memverge/charts/mmcai-manager \
-    --version 0.2.0-rc2
+    --version 0.2.0
