@@ -13,7 +13,7 @@ for worker in $WORK_NODE; do
     kubectl drain $worker
 done
 
-wget -O mmcai_adjust_requests.py
+wget -O mmcai_adjust_requests.py https://raw.githubusercontent.com/MemVerge/mmc.ai-setup/refs/heads/main/mmcai-drain.sh
 
 # Dependencies for the requests.py script
 pip install kubernetes

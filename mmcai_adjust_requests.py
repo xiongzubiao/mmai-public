@@ -44,7 +44,7 @@ def get_pods_with_high_cpu_requests(threshold=0.1):
                 })
 
     # Sort pods by CPU requests, highest first
-    pod_list.sort(key=lambda x: x['cpu_limiot], reverse=True)
+    pod_list.sort(key=lambda x: x['cpu_limit'], reverse=True)
     return pod_list
 
 def convert_cpu_to_millicores(cpu):
