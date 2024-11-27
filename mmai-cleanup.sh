@@ -1,11 +1,8 @@
-#!/bin/bash
-# Overridden on package
-SCRIPT_VERSION="unreleased"
-echo "Running cleanup.sh version ${SCRIPT_VERSION}"
+#!/usr/bin/env bash
 
 # Warning
 echo "==================== WARNING ===================="
-echo "THIS WILL DELETE ALL RESOURCES CREATED BY RANCHER"
+echo "THIS WILL DELETE ALL RESOURCES CREATED BY MMAI"
 echo "MAKE SURE YOU HAVE CREATED AND TESTED YOUR BACKUPS"
 echo "THIS IS A NON REVERSIBLE ACTION"
 echo "==================== WARNING ===================="
@@ -39,14 +36,20 @@ echo "=> Printing cluster info for confirmation"
 kubectl cluster-info
 kubectl get nodes -o wide
 
-if [ "$1" != "force" ]; then
+case $1 in
+  "force" )
+    echo "'force' flag provided. Continuing..."
+    ;;
+
+  * )
     echo "Do you want to continue (y/n)?"
     read -r answer
-
     if [ "$answer" != "y" ]; then
-        exit 1
+      echo "Exiting..."
+      exit 1
     fi
-fi
+    ;;
+esac
 
 kcd()
 {
@@ -448,5 +451,10 @@ done
 # Delete all cattle CRDs
 # Exclude helm.cattle.io and addons.k3s.cattle.io to not break RKE2 addons
 for CRD in $(kubectl get crd -o name | grep cattle\.io | grep -v helm\.cattle\.io | grep -v k3s\.cattle\.io); do
+  kcd "$CRD"
+done
+
+# Delete all mmai CRDs
+for CRD in $(kubectl get crd -o name | grep -e mmai -e kueue -e nvidia -e mmcloud); do
   kcd "$CRD"
 done
