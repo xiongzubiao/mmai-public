@@ -1,5 +1,41 @@
 #!/usr/bin/env bash
 
+# Save STDOUT and STDERR to a log file
+# arg1 = path to log file. If empty, save to current directory
+TEE=("$(command -v tee)")               # Path to tee
+TAIL=("$(command -v tail)")             # Path to tail
+SCRIPT_NAME=${0##*/}                    # Name of this script
+SCRIPT_NAME=${SCRIPT_NAME%.*}           # Name of this without extension
+STDOUT_LOG_FILE="${SCRIPT_NAME}.log"    # Filename to save STDOUT and STDERR
+log_stdout_stderr() {
+    local LOG_PATH
+    if [[ $1 != "" ]]; then
+        # Use the specified path
+        LOG_PATH=${1}
+    else
+        # Use current working directory
+        LOG_PATH=$(pwd)
+    fi
+
+    LOG_FILE="${LOG_PATH}/${STDOUT_LOG_FILE}"
+
+    # Capture STDOUT and STDERR to a log file, and display to the terminal
+    if [[ ${TEE} != "" ]]; then
+        # Use the tee approach
+        exec &> >(${TEE} -a "${LOG_FILE}")
+    else
+        # Use the tail approach
+        exec &> "${LOG_FILE}" && ${TAIL} "${LOG_FILE}"
+    fi
+}
+
+initialize_log() {
+    read -p "Enter the path to which logs should be saved (default '$STDOUT_LOG_FILE' in the current working directory): " logpath
+    log_stdout_stderr $logpath
+}
+
+initialize_log
+
 # Warning
 echo "==================== WARNING ===================="
 echo "THIS WILL DELETE ALL RESOURCES CREATED BY MMAI"
