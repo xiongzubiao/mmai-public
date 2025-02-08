@@ -38,6 +38,8 @@ kubectl create secret generic memverge-dockerconfig --namespace cattle-system \
 
 ## Install cert-manager
 
+> Skip this step if `cert-manager` is already installed.
+
 ```sh
 helm repo add jetstack https://charts.jetstack.io --force-update
 
@@ -51,7 +53,7 @@ Or check https://cert-manager.io/docs/installation for other options.
 The MMAI management server is designed to be secure by default and requires SSL/TLS configuration.
 There are three recommended options for the source of the certificate used for TLS termination at the MMAI server:
 
-### 1.  MMAI-generated Certificate
+### 1. MMAI-generated Certificate
 
 The default is for MMAI to generate a CA and uses `cert-manager` to issue the certificate for access to the MMAI server interface.
 
@@ -66,8 +68,9 @@ helm install --namespace cattle-system mmai oci://ghcr.io/memverge/charts/mmai \
 - Set the `bootstrapPassword` to something unique for the admin user.
 - To install the latest development version, replace the `--version <version>` option with `--devel` in the install command.
 
-### 2.  Let's Encrypt
+### 2. Let's Encrypt
 
+<details>
 This option uses `cert-manager` to automatically request and renew `Let's Encrypt` certificates. This is a free service that provides you with a valid certificate as `Let's Encrypt` is a trusted CA.
 
 ```sh
@@ -77,9 +80,11 @@ helm install --namespace cattle-system mmai oci://ghcr.io/memverge/charts/mmai \
   --set ingress.tls.source=letsEncrypt --set letsEncrypt.email=<me@example.org> \
   --set letsEncrypt.ingress.class=<ingress-controller-name>
 ```
+</details>
 
-### 3.  Bring Your Own Certificate
+### 3. Bring Your Own Certificate
 
+<details>
 In this option, Kubernetes secrets are created from your own certificates for MMAI to use.
 
 When you run this command, the hostname option must match the Common Name or a Subject Alternative Names entry in the server certificate or the Ingress controller will fail to configure correctly.
@@ -100,6 +105,7 @@ helm install --namespace cattle-system mmai oci://ghcr.io/memverge/charts/mmai \
   --set ingress.tls.source=secret --set privateCA=true
 ```
 Now that MMAI is deployed, see [Adding TLS Secrets](add-tls-secrets.md) to publish your certificate files so MMAI and the Ingress controller can use them.
+</details>
 
 ## Uninstall MMAI
 
