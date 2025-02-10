@@ -2,7 +2,9 @@
 
 ## Prerequisites
 
-- Access to a Kubernetes v1.28+ cluster with `cluster-admin` role.
+- Access to a Kubernetes v1.28+ cluster with `cluster-admin` role. Supported distributions are:
+    - Vanilla Kubernetes
+    - K3s
 - CRI runtime support (https://kubernetes.io/docs/setup/production-environment/container-runtimes/):
   - `Containerd`: v1.7+.
   - `CRI-O`: v1.28+.
@@ -10,7 +12,11 @@
 - Ingress Controller is set up in the cluster. There are many choices. See https://kubernetes.io/docs/concepts/services-networking/ingress-controllers/.
 - A default storage class is set up in the cluster to dynamically create persistent volume claims.
   - To support checkpoint feature, the storage class must be able to move a persistent volume from one node to another.
-- `NVIDIA GPU Operator` is NOT installed in the cluster. MMAI will install it.
+- The following helm charts are subcomponents of MMAI; they are deployed automatically, and should not be present on the cluster prior to MMAI installation:
+  - `NVIDIA GPU Operator` and its dependencies (`DCGM Exporter`, `NVIDIA Device Plugin`, `Node Feature Discovery`, etc.)
+  - `HAMi`
+  - `Prometheus Operator` and its derivatives, such as `kube-state-metrics`
+  - `Rancher`
 - `kubectl` version v1.28+.
 - `Helm` version v3.14+.
 
@@ -109,7 +115,7 @@ Now that MMAI is deployed, see [Adding TLS Secrets](add-tls-secrets.md) to publi
 
 ## Uninstall MMAI
 
-This command deletes the MMAI deployment, but leave MMAI CRDs and user-created MMAI CRs in the cluster.
+This command deletes the MMAI deployment, but leaves MMAI CRDs and user-created MMAI CRs in the cluster.
 
 ```sh
 helm uninstall --namespace cattle-system mmai
