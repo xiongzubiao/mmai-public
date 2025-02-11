@@ -86,6 +86,7 @@ helm install --namespace cattle-system mmai oci://ghcr.io/memverge/charts/mmai \
   --set ingress.tls.source=letsEncrypt --set letsEncrypt.email=<me@example.org> \
   --set letsEncrypt.ingress.class=<ingress-controller-name>
 ```
+
 </details>
 
 ### 3. Bring Your Own Certificate
@@ -111,6 +112,7 @@ helm install --namespace cattle-system mmai oci://ghcr.io/memverge/charts/mmai \
   --set ingress.tls.source=secret --set privateCA=true
 ```
 Now that MMAI is deployed, see [Adding TLS Secrets](add-tls-secrets.md) to publish your certificate files so MMAI and the Ingress controller can use them.
+
 </details>
 
 ## Uninstall MMAI
